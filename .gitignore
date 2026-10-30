@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+
+# Secrets / local state
+.env
+.clawness/
+
+# Office lock files and the working copy of the slides (docs/ holds the tracked deck)
+~$*
+EL_Phase1_Wildfire_edited.pptx
+
+# Extracted / derived data (large, reproducible). Raw zips in data/raw/ ARE tracked.
+data/raw/*.csv
+data/raw/extracted/
+data/firms_india_raw.csv
+data/cache/
+models/*.joblib
+.claude/
