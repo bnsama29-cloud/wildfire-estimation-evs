@@ -55,7 +55,7 @@ Steps:
 3. Warm up the MQ-135 for several minutes before trusting readings. Its datasheet asks for a much longer first preheat.
 4. Calibrate: note the raw value in clean air and near smoke from a safely extinguished match. Set `SMOKE_ALERT_RAW` between them in both files.
 5. Run `streamlit run src/app.py`, choose **ESP32 on USB**, and pick the port.
-6. Unplug the board. The dashboard must return to the sliders within about 6 seconds.
+6. Unplug the board. The dashboard must return to the sliders within about 15 seconds.
 
 Do this safely: use a small amount of smoke in a ventilated area with an adult or lab supervisor present, and keep flames away from the rig.
 
