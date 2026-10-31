@@ -11,8 +11,10 @@ Educational prototype. Indian satellite fire points (NASA FIRMS VIIRS) joined wi
 | Datasets in repo (`data/raw`) | done |
 | Slides (`docs/EL_Phase1_Wildfire.pptx`) | done |
 | Serial parser + ESP32 sketch (`src/serial_source.py`, `hardware/`) | written, parser unit-tested, sketch not yet flashed |
-| FIRMS cleaning + satellite-only FRP model | implemented; weather not yet included |
-| Weather join and dashboard | next (Software steps below) |
+| FIRMS cleaning + quick-look figures | implemented |
+| Cached Open-Meteo weather join | implemented; run the full join before training |
+| Satellite-only and weather-informed FRP models | implemented; training writes full-data metrics |
+| Offline dashboard | implemented; reads the local joined CSV and saved model |
 | Hardware build and integration | after the model works |
 
 ## Repository layout
@@ -20,11 +22,12 @@ Educational prototype. Indian satellite fire points (NASA FIRMS VIIRS) joined wi
 ```
 data/raw/        FIRMS VIIRS zips (tracked); extracted CSVs are git-ignored
 data/samples/    one-location Open-Meteo hourly sample (RH only)
-data/            firms_india_raw.csv (local, ignored), india_fires_weather.csv (output)
-src/             app.py  data_prep.py  features.py  model_io.py  train_model.py  serial_source.py
+data/            firms_india_raw.csv and india_fires_weather.csv (local, ignored)
+data/cache/      compressed, resumable Open-Meteo responses (ignored)
+src/             app.py  data_prep.py  features.py  model_io.py  quicklook.py  train_model.py  serial_source.py
 hardware/        esp32_sensor/esp32_sensor.ino
 tests/           pytest tests
-evidence/        screenshots, plots, photos for the report
+evidence/        generated figures, screenshots, photos for the report
 docs/            EL_Phase1_Wildfire.pptx
 ```
 
@@ -36,7 +39,7 @@ docs/            EL_Phase1_Wildfire.pptx
 | `data/raw/DL_FIRE_SV-C2_834164.zip` | VIIRS Suomi NPP (SV), 375 m. `fire_archive` 2,281,841 rows + `fire_nrt` 29,259 rows |
 | `data/samples/open-meteo-21.97N78.98E696m.csv` | Hourly relative humidity for one point (21.97 N, 78.98 E), 2023 onward |
 
-Verified facts about the archives: 2023-01-01 to 2026-07-31, already inside India's box (lat 8.0-35.1, lon 68.5-97.2). Columns: `latitude, longitude, brightness, scan, track, acq_date, acq_time, satellite, instrument, confidence, version, bright_t31, frp, daynight, type`. `fire_nrt` continues the series after July 2026.
+The current cleaned file contains 4,713,018 detections from 2023-01-01 through 2026-10-29, inside India's configured box (lat 8.0-35.1, lon 68.5-97.2). Source CSV columns include `latitude, longitude, brightness, scan, track, acq_date, acq_time, satellite, instrument, confidence, version, bright_t31, frp, daynight, type`.
 
 - **Confidence is a letter for VIIRS**: `n` nominal (~79%), `l` low (~18%), `h` high (~2.5%). Map to categories, or drop `l` for cleaner training.
 - **FRP is heavily skewed**: median about 3.5 MW, 90th percentile about 11 MW, 99th about 47 MW. Train on `log1p(frp)`.
@@ -53,32 +56,37 @@ pip install -r requirements.txt
 python -m pytest tests -q
 ```
 
-1. **Extract and clean (`src/data_prep.py`)**. Unzip into `data/raw/extracted/`, read `fire_archive` + `fire_nrt` from both satellites, keep `latitude, longitude, acq_date, acq_time, frp, confidence, brightness, satellite`, drop rows with missing values, drop exact duplicates, write `data/firms_india_raw.csv`. Rename to `lat, lon` for the output file.
-2. **Quick look first**. Plot FRP histogram (log axis), fires per month, and a scatter map. This gives Figs 5, 6 and 9 and shows whether the data looks right before any weather work.
+1. **Extract and clean (`src/data_prep.py`)**. `python src/data_prep.py` extracts the FIRMS ZIPs into `data/raw/extracted/`, combines the archive and near-real-time CSVs, keeps usable rows in the India bounds, drops exact duplicates, and writes `data/firms_india_raw.csv` with `lat, lon`.
+2. **Quick look first**. Run `python src/quicklook.py` to plot the log-axis FRP histogram, fires per month, and a uniformly sampled scatter map. This creates Figs 5, 6 and 9 before weather work.
 3. **Weather join (`src/data_prep.py`)**.
    - Round each point to a 0.25 degree grid cell. Fetch **one hourly series per cell for the whole date range** (`temperature_2m, relative_humidity_2m, wind_speed_10m`) from `https://archive-api.open-meteo.com/v1/archive`, instead of one call per point.
-   - Cache each cell's response on disk in `data/cache/` so a re-run makes no requests.
-   - For each fire point take the hour nearest its satellite pass (convert `acq_time` UTC to the series time zone).
-   - Start with a few thousand points to test, then widen. Respect Open-Meteo's free rate limits; add a short sleep and retry on HTTP 429.
-   - Output `data/india_fires_weather.csv` with `lat, lon, acq_date, frp, confidence, temp_c, rh_percent, wind_kmh`.
+   - Cache each compressed cell response, including request metadata and retrieval time, in `data/cache/`; completed cells are reused after an interruption.
+   - Weather requests use UTC to match FIRMS `acq_time`, run at most four requests concurrently, and globally space request starts to stay within the archive service's hourly limit. HTTP 429/5xx responses are retried; an hourly-limit response pauses requests for an hour. The full download may take several hours, and completed cells are reused after an interruption.
+   - Start with a few thousand rows, then widen to the full file:
+     ```bash
+     python src/data_prep.py --weather --max-points 3000 --output data/india_fires_weather_pilot.csv
+     python src/data_prep.py --weather --force-weather
+     ```
+   - The full current file requires weather for 4,568 distinct cells. Allow the full join to finish; it makes thousands of archive requests and caches the results for offline reuse.
+   - Each point is matched to the nearest hourly weather observation to its UTC satellite pass. The complete result is `data/india_fires_weather.csv`, including `temp_c, rh_percent, wind_kmh`.
 4. **Features (`src/features.py`)**. Inputs: `temp_c, rh_percent, wind_kmh`; optional `month`, `brightness`, `confidence`. Target: `log1p(frp)`. Risk bands: start with LOW below 5 MW, MEDIUM 5-15 MW, HIGH 15 MW and above, then tune from the percentiles above.
-5. **Train (`src/train_model.py`, `src/model_io.py`)**. Train an XGBoost regressor on the satellite-only features with an 80/20 random split, report MAE and R2 on `log1p(frp)` and MAE in MW, and compare with a training-median baseline. By default, use every cleaned row and request CUDA (`device="cuda"`); `--max-samples N` is an optional cap for experiments. Save with joblib to `models/`. Example: `python src/train_model.py`.
-   - Current full-data random-split result: 4,713,018 rows (3,770,414 train / 942,604 test), log-FRP MAE 0.259, MW MAE 2.433, log-FRP R2 0.746. These scores are for a random holdout and may be optimistic because nearby/same-period detections can be related.
-   - Inputs include satellite brightness and brightness temperature, scan/track footprint, location, confidence, day/night, satellite, and cyclic month/pass-time features.
-   - The current model does not use weather yet; implement and validate the weather join before treating it as the planned weather-informed model.
-   - **Leakage warning**: points from the same day and area are near-duplicates. Also report a **time-based split** (train 2023-2025, test 2026) and use grouped splits by date for cross-validation.
-   - If the weather join is incomplete, fall back to `lat, lon, month` only and label the model "fallback: no weather" on screen.
-6. **Dashboard (`src/app.py`)**.
+5. **Train (`src/train_model.py`, `src/model_io.py`)**. Run `python src/train_model.py` after the weather join. The default uses all valid rows, an 80/20 random split (`random_state=42`), XGBoost with `device="cuda"`, and joblib output under `models/readme_model_training/`. `--max-samples N` is only for experiments; omit it for the full run.
+   - Train the README's satellite-only XGBoost and a weather-informed XGBoost using the same 80/20 split. Compare both against a training-median baseline; the dashboard uses the weather-informed model.
+   - Report log-FRP MAE/R² and MW MAE. The trainer also evaluates an untouched 2026 time holdout (train 2023-2025) and 3-fold date-grouped cross-validation; cross-validation uses a deterministic 100,000-row sample to keep it practical.
+   - CUDA is requested first; if XGBoost reports that CUDA is unavailable, the trainer warns and retries on CPU. The model, metrics, and figures are stored locally; outputs for this training branch do not overwrite the original `models/wildfire_model.joblib`.
+   - **Leakage warning**: nearby/same-day detections can be related, so random-split scores may be optimistic. Use the time-based and grouped-date results as additional checks.
+   - If weather data is unavailable, an explicit `--allow-no-weather-fallback` option trains the documented `lat, lon, month` model and the dashboard labels it **fallback: no weather**. The full weather-informed run does not silently fall back.
+6. **Dashboard (`src/app.py`)**. Run `streamlit run src/app.py` after training.
    - Title: *Early Wildfire Detection and Analysis using ML*. Caption: *Educational prototype. Indian satellite fire points + weather. Not an official forecast.*
    - Left: sliders for temperature, humidity, wind, or pick a historical fire point.
    - Centre: map coloured by FRP band (Fig 9).
    - Right: predicted FRP, risk band, feature importance.
    - Bottom: table of sample fire points with weather.
-   - Load the model and CSV from disk only. It must run offline once data is cached and with no sensor.
+   - The local chart uses longitude/latitude axes instead of map tiles, so the dashboard itself needs no network access. The model, joined CSV, and weather cache are read from disk; no sensor is required.
 7. **Tests (`tests/`)**. Cover the weather-cell rounding, nearest-hour lookup, risk-band thresholds and the model round trip. Run `python -m pytest tests -q` before every commit.
-8. **Evidence (`evidence/`)**. Save each figure listed below as a PNG with the file name given.
+8. **Evidence (`evidence/`)**. Quick-look and training commands save generated figures in `evidence/`. Fig 10 is a real hardware photo and must be taken after the physical ESP32 build; it is not generated by code.
 
-Run the dashboard: `streamlit run src/app.py`.
+Run the dashboard: `streamlit run src/app.py`. To explicitly train the no-weather fallback instead, use `python src/train_model.py --data data/firms_india_raw.csv --allow-no-weather-fallback`.
 
 ## Hardware (build after the model and dashboard work)
 
@@ -145,9 +153,9 @@ Numbers 1-3 and 4 are already made; 5-10 are produced as the work progresses. Sa
 | 4 | README | Wiring diagram: DHT22 to GPIO4, MQ-135 AO through a 10k/20k divider to GPIO34, USB to PC | ESP32 sensor wiring. |
 | 5 | `evidence/fig5_frp_hist.png` | Histogram of FRP on a log axis, showing the long right tail (median ~3.5 MW, p99 ~47 MW) | Distribution of satellite FRP over India. |
 | 6 | `evidence/fig6_monthly.png` | Fire count by month, showing the dry-season peak | Seasonality of detections. |
-| 7 | `evidence/fig7_pred_vs_actual.png` | Predicted vs actual FRP on the test set with the y = x line | Model accuracy on held-out data. |
-| 8 | `evidence/fig8_importance.png` | Random Forest feature importance (temperature, humidity, wind) | Which weather inputs matter most. |
-| 9 | `evidence/fig9_map.png` | Real dashboard map: fire points coloured by FRP band | Fire detections across India. |
+| 7 | `evidence/fig7_pred_vs_actual.png` | Predicted vs actual FRP on the random test set with the y = x line | Model accuracy on held-out data. |
+| 8 | `evidence/fig8_importance.png` | Random Forest feature importance for temperature, humidity and wind (up to 100,000 complete rows) | Which weather inputs matter most. |
+| 9 | `evidence/fig9_map.png` | Sampled FIRMS detections plotted by location and FRP | Fire detections across India. |
 | 10 | `evidence/fig10_rig.jpg` | Photo of the ESP32 rig next to the dashboard showing live values | Hardware integrated with the dashboard. |
 
 ## Limitations to state in the report

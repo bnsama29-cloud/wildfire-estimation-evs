@@ -16,6 +16,9 @@ EL_Phase1_Wildfire_edited.pptx
 data/raw/*.csv
 data/raw/extracted/
 data/firms_india_raw.csv
+data/india_fires_weather.csv
+data/india_fires_weather_pilot.csv
 data/cache/
 models/*.joblib
+models/readme_model_training/*.joblib
 .claude/
