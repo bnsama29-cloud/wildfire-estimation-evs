@@ -9,6 +9,7 @@ ROOT = Path(__file__).resolve().parents[1]
 RAW_DIR = ROOT / "data" / "raw"
 EXTRACTED_DIR = RAW_DIR / "extracted"
 OUTPUT_PATH = ROOT / "data" / "firms_india_raw.csv"
+VEGETATION_FIRE_TYPE = 0
 
 REQUIRED_COLUMNS = [
     "latitude",
@@ -47,7 +48,7 @@ def extract_archives(force: bool = False) -> Path:
 def _read_fire_csv(csv_path: Path) -> pd.DataFrame:
     df = pd.read_csv(csv_path)
     if "type" not in df.columns:
-        df["type"] = 0
+        df["type"] = pd.NA  # near-real-time files have no type, so they cannot be confirmed as vegetation fires
     missing = set(REQUIRED_COLUMNS) - set(df.columns)
     if missing:
         raise ValueError(f"{csv_path.name} missing required columns: {sorted(missing)}")
@@ -70,9 +71,11 @@ def prepare_firms_dataset(output_path: Path = OUTPUT_PATH) -> pd.DataFrame:
     df = df.rename(columns={"latitude": "lat", "longitude": "lon"})
 
     # Keep only valid Indian box values and fire records with usable signal.
+    # FIRMS type 0 is "presumed vegetation fire"; 1-3 are volcanoes, static land sources and offshore.
     df = df[
-        df["lat"].between(8.0, 35.1)
-        & df["lon"].between(68.5, 97.2)
+        df["lat"].between(8.0, 35.2)
+        & df["lon"].between(68.4, 97.3)
+        & df["type"].eq(VEGETATION_FIRE_TYPE)
         & df["frp"].notna()
         & df["brightness"].notna()
         & df["confidence"].notna()

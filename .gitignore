@@ -18,4 +18,7 @@ data/raw/extracted/
 data/firms_india_raw.csv
 data/cache/
 models/*.joblib
+!models/wildfire_weather_model.joblib
+data/india_fires_weather_full.csv.gz
+hardware/esp32_sensor/.pio/
 .claude/

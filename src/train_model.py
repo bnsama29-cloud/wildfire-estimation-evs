@@ -14,7 +14,6 @@ from model_io import save_metrics, save_model
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_MODEL_PATH = ROOT / "models" / "wildfire_model.joblib"
-DEFAULT_METRICS_PATH = ROOT / "models" / "wildfire_model_metrics.json"
 DATA_COLUMNS = [
     "lat",
     "lon",
@@ -119,6 +118,7 @@ def train_model(
     data_path: str | Path = OUTPUT_PATH,
     model_path: str | Path = DEFAULT_MODEL_PATH,
     max_samples: int | None = None,
+    device: str = "cpu",
 ):
     X, y = load_training_data(data_path)
     if max_samples is not None and max_samples > 0 and len(y) > max_samples:
@@ -132,7 +132,7 @@ def train_model(
     regressor = XGBRegressor(
         objective="reg:squarederror",
         tree_method="hist",
-        device="cuda",
+        device=device,
         n_estimators=400,
         max_depth=8,
         learning_rate=0.08,
@@ -168,7 +168,7 @@ def train_model(
         "baseline_mae_log1p_frp": float(baseline_mae_log),
         "baseline_mae_mw": float(baseline_mae_mw),
         "model": "XGBRegressor",
-        "training_device": "cuda",
+        "training_device": device,
         "feature_columns": FEATURE_COLUMNS,
         "improvements": [
             "Added brightness-temperature, pixel-footprint, day/night, and cyclic seasonal/pass-time features"
@@ -176,7 +176,7 @@ def train_model(
     }
 
     save_model(regressor, model_path)
-    save_metrics(metrics, DEFAULT_METRICS_PATH)
+    save_metrics(metrics, Path(model_path).with_name(Path(model_path).stem + "_metrics.json"))
     return regressor, metrics
 
 
@@ -190,6 +190,7 @@ def parse_args():
         default=None,
         help="Optional row cap for experiments; omit to train on all rows",
     )
+    parser.add_argument("--device", type=str, default="cpu", help="XGBoost device, for example cpu or cuda")
     return parser.parse_args()
 
 
@@ -202,6 +203,7 @@ if __name__ == "__main__":
         data_path=data_path,
         model_path=args.output,
         max_samples=args.max_samples,
+        device=args.device,
     )
     print(f"Model trained: {args.output}")
     print(f"Rows: {metrics['n_samples']:,} ({metrics['train_size']:,} train / {metrics['test_size']:,} test)")
