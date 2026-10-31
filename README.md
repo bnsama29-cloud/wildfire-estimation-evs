@@ -13,7 +13,7 @@ Educational prototype. Indian satellite fire points (NASA FIRMS VIIRS) joined wi
 | Weather model (`src/train_weather_model.py`) | done: results below |
 | Dashboard (`src/app.py`) | done: runs offline with no sensor |
 | ESP32 sketch and Wokwi project (`hardware/`) | sketch compiles and runs on wokwi.com; dashboard link tested against a stand-in server, not yet against live Wokwi; not yet flashed to a real board |
-| Slides (`docs/EL_Phase1_Wildfire.pptx`) | needs the final model name and an SDG slide |
+| Slides (`docs/EL_Phase1_Wildfire.pptx`) | updated with the final model, timeline and SDG slide; verify citations before submitting |
 
 ## Results
 

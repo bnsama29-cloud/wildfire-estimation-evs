@@ -42,7 +42,13 @@ def test_fire_weather_index_matches_a_hand_worked_value():
     assert fire_weather_index(36.0, 25.0, 15.0) == pytest.approx(22.4, abs=0.1)
 
 
-def test_fire_weather_index_uses_the_right_moisture_branch_and_stays_in_range():
+def test_fire_weather_index_uses_the_moisture_formula_for_each_humidity_range():
+    # worked by hand at 30 C and 20 km/h: below 10 %, 10-50 % and above 50 % use different formulas
+    assert fire_weather_index(30.0, 9.0, 20.0) == pytest.approx(35.98, abs=0.05)
+    assert fire_weather_index(30.0, 80.0, 20.0) == pytest.approx(12.25, abs=0.05)
+
+
+def test_fire_weather_index_falls_with_humidity_and_stays_in_range():
     assert fire_weather_index(30.0, 9.0, 20.0) > fire_weather_index(30.0, 30.0, 20.0)
     assert fire_weather_index(30.0, 30.0, 20.0) > fire_weather_index(30.0, 80.0, 20.0)
     assert fire_weather_index(50.0, 5.0, 300.0) == 100.0

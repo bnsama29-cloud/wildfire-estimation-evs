@@ -8,7 +8,7 @@ One sketch, `esp32_sensor/esp32_sensor.ino`, runs on the real board and in Wokwi
 
 | Part | Job |
 |---|---|
-| DHT22 | Temperature and humidity. These replace two dashboard sliders and feed the model. |
+| DHT22 | Temperature and humidity. These replace two dashboard sliders and feed the model and the fire weather index. |
 | MQ-135 | Smoke and air quality. This drives the alert only, because the model is not trained on smoke. |
 | ESP32 | Sends `TEMP,HUMIDITY,SMOKE` every 2 s and lights the alert LED, even with no PC attached. |
 
