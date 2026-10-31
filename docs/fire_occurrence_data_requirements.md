@@ -4,6 +4,29 @@ This document describes the data needed to predict whether a satellite-detectabl
 fire will occur in a location during a future time window. It is a data plan,
 not a claim that the current FRP regression model predicts future fires.
 
+## Work completed so far
+
+- The repository contains two NASA FIRMS VIIRS ZIP archives: NOAA-20 and
+  Suomi NPP. Each includes archive and near-real-time fire detections. The
+  current cleaning script combines their CSVs, keeps records within the
+  configured India bounds, removes invalid FRP rows and exact duplicates,
+  and writes `data/firms_india_raw.csv`.
+- An XGBoost regressor was trained on all 4,713,018 cleaned detections, using
+  an 80/20 random split: 3,770,414 training rows and 942,604 test rows. Training
+  requested CUDA on the RTX 4060.
+- The FRP model uses location, brightness, brightness temperature, scan/track,
+  confidence, day/night, satellite, and cyclic month/pass-time features. Its
+  held-out random-split results were MAE 0.259 on `log1p(FRP)`, MAE 2.433 MW,
+  and R-squared 0.746 on `log1p(FRP)`. The median baseline had MAE 4.107 MW.
+  These results describe estimation of FRP for already detected fires, not
+  advance prediction of fire occurrence. Brightness-related features are
+  closely related to the FRP target, and the random split may be optimistic.
+- The project also has an ESP32 sensor sketch and a Python serial packet
+  parser with tests. These sensor readings are not included in the FRP model.
+- The existing Open-Meteo sample contains hourly relative humidity for one
+  location only. No India-wide weather join, occurrence classifier, future
+  fire labels, vegetation/fuel dataset, or terrain dataset has been built yet.
+
 ## Define the prediction target
 
 Start with a fixed target such as:
