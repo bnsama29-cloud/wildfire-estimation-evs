@@ -23,9 +23,11 @@ not a claim that the current FRP regression model predicts future fires.
   closely related to the FRP target, and the random split may be optimistic.
 - The project also has an ESP32 sensor sketch and a Python serial packet
   parser with tests. These sensor readings are not included in the FRP model.
-- The existing Open-Meteo sample contains hourly relative humidity for one
-  location only. No India-wide weather join, occurrence classifier, future
-  fire labels, vegetation/fuel dataset, or terrain dataset has been built yet.
+- `src/weather_join.py` has joined Open-Meteo weather to 1,910,632 fire points
+  from 2024-25 across the 180 busiest 1 degree cells. It covers days with fires
+  in those cells, so it is not a full occurrence dataset. No occurrence
+  classifier, future fire labels, vegetation/fuel dataset, or terrain dataset
+  has been built yet.
 
 ## Define the prediction target
 
@@ -67,7 +69,7 @@ against an independent ground-truth source.
 ### 2. Historical weather: predictors
 
 Get time-matched historical weather across the study area, not only the
-single-location sample in `data/samples/`. Useful variables include:
+180 cells already cached by `src/weather_join.py`. Useful variables include:
 
 - temperature and relative humidity
 - wind speed and direction
@@ -130,12 +132,12 @@ times can share nearly identical weather and fire episodes.
 ## Scope of the existing repository data
 
 The two FIRMS ZIP files provide satellite detections that can contribute
-positive labels and historical-fire features. The Open-Meteo sample currently
-contains humidity for only one location and is not sufficient for
-India-wide weather features. No ground-truth absence labels, broad weather
-coverage, vegetation/fuel layers, or terrain layers are currently assembled.
-The existing FRP model estimates intensity from an observed fire point; it is
-not an occurrence-forecast model.
+positive labels and historical-fire features. The weather join covers the 180
+busiest cells for 2024-25, which leaves the quieter parts of India without
+weather. No ground-truth absence labels, vegetation/fuel layers, or terrain
+layers are currently assembled. Both FRP models estimate intensity, not
+occurrence: the satellite model from an observed fire point, the weather model
+from conditions if a fire burns.
 
 ## Suggested build order
 
