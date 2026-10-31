@@ -1,0 +1,94 @@
+{
+  "band_thresholds_mw": [
+    4.367916107177734,
+    6.924474716186523
+  ],
+  "chosen_model": "XGBoost (monotonic weather)",
+  "feature_importance": {
+    "is_day": 0.8614553213119507,
+    "lat": 0.013780804350972176,
+    "lon": 0.02610602229833603,
+    "month_cos": 0.01664644293487072,
+    "month_sin": 0.0191122367978096,
+    "rain_7d_mm": 0.005296079441905022,
+    "rh_percent": 0.029349761083722115,
+    "temp_c": 0.008495837450027466,
+    "vpd_kpa": 0.01561845000833273,
+    "wind_kmh": 0.0041389805264770985
+  },
+  "fire_weather_thresholds": [
+    12.143934298611928,
+    21.825538258641636
+  ],
+  "large_fire_mw": 15.0,
+  "split": "train 2024, test 2025; model chosen on held-out 2024 dates",
+  "test": {
+    "mae_log1p_frp": 0.40421443841541277,
+    "mae_mw": 4.0055319020040425,
+    "r2_log1p_frp": 0.46496905132204835
+  },
+  "test_band_lift": {
+    "HIGH": {
+      "fires": 163696,
+      "share_large": 0.2719553318346203
+    },
+    "LOW": {
+      "fires": 523921,
+      "share_large": 0.011032197602310272
+    },
+    "MEDIUM": {
+      "fires": 343903,
+      "share_large": 0.05996749083317098
+    }
+  },
+  "test_baseline_median": {
+    "mae_log1p_frp": 0.5679143810652997,
+    "mae_mw": 4.716831210252831,
+    "r2_log1p_frp": -0.0068251793886136
+  },
+  "test_fire_weather_lift": {
+    "HIGH": {
+      "fires": 144803,
+      "share_large": 0.12421703970221612
+    },
+    "LOW": {
+      "fires": 506221,
+      "share_large": 0.04121717589748351
+    },
+    "MEDIUM": {
+      "fires": 380496,
+      "share_large": 0.0842820949497498
+    }
+  },
+  "test_inputs_compared": {
+    "place and season only": {
+      "mae_log1p_frp": 0.4081251167782106,
+      "mae_mw": 4.000914974918137,
+      "r2_log1p_frp": 0.45933719066101275
+    },
+    "weather only": {
+      "mae_log1p_frp": 0.4984712205923721,
+      "mae_mw": 4.424044653493886,
+      "r2_log1p_frp": 0.1679533798667553
+    }
+  },
+  "test_rows": 1031520,
+  "train_rows": 879112,
+  "validation": {
+    "RandomForest": {
+      "mae_log1p_frp": 0.40848286852136134,
+      "mae_mw": 4.167015414124423,
+      "r2_log1p_frp": 0.46660832130416274
+    },
+    "XGBoost": {
+      "mae_log1p_frp": 0.40861044842889976,
+      "mae_mw": 4.169701497126764,
+      "r2_log1p_frp": 0.4630605148803463
+    },
+    "XGBoost (monotonic weather)": {
+      "mae_log1p_frp": 0.40662351880019043,
+      "mae_mw": 4.15931821327087,
+      "r2_log1p_frp": 0.46989556078222794
+    }
+  }
+}

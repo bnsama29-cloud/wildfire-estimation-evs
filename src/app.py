@@ -13,7 +13,7 @@ import streamlit as st
 
 from features import risk_band
 from model_io import load_model
-from predict import Conditions, choose_conditions, predict_frp
+from predict import Conditions, choose_conditions, fire_weather, predict_frp
 from serial_source import SMOKE_ALERT_RAW, WOKWI_URL, SerialSource, available_ports
 from weather_join import SAMPLE_JOIN_PATH
 
@@ -130,6 +130,9 @@ def prediction_panel(bundle: dict, sliders: Conditions, port: str | None, observ
         {"LOW": st.success, "MEDIUM": st.warning, "HIGH": st.error}[band](f"Risk band: {band}")
         if observed is not None:
             st.caption(f"Satellite observed {observed:.1f} MW for this fire.")
+        index, weather_band = fire_weather(bundle, conditions)
+        st.metric("Fire weather index (0-100)", f"{index:.0f}", help="Fosberg index from temperature, humidity and wind.")
+        st.caption(f"Weather alone: {weather_band}, compared with weather during 2024 fires.")
     show_sensor(reading, port)
 
 

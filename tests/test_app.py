@@ -31,8 +31,10 @@ def test_app_runs_without_hardware(app):
 def test_sliders_change_the_prediction_inputs_without_error(app):
     app.slider[0].set_value(48)
     app.slider[1].set_value(8)
+    before = metric(app, "Fire weather index (0-100)")
     app.run()
     assert not app.exception
+    assert int(metric(app, "Fire weather index (0-100)")) > int(before)
 
 
 @pytest.mark.skipif(not READY, reason="model and data not built")

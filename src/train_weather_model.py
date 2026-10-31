@@ -17,7 +17,7 @@ from sklearn.metrics import mean_absolute_error, r2_score
 from sklearn.model_selection import GroupShuffleSplit
 from xgboost import XGBRegressor
 
-from features import WEATHER_FEATURES, weather_features
+from features import WEATHER_FEATURES, fire_weather_index, weather_features
 from model_io import save_metrics, save_model
 from predict import band_for
 from weather_join import FULL_JOIN_PATH
@@ -112,6 +112,10 @@ def train(df: pd.DataFrame) -> tuple[dict, dict]:
         partial = xgb(columns, monotone=False).fit(X_all[columns], y_all)
         inputs_compared[label] = score(y_test, partial.predict(X_test[columns]))
 
+    fwi_train = fire_weather_index(train_df["temp_c"], train_df["rh_percent"], train_df["wind_kmh"])
+    fwi_test = fire_weather_index(test_df["temp_c"], test_df["rh_percent"], test_df["wind_kmh"])
+    fwi_thresholds = tuple(float(q) for q in np.quantile(fwi_train, BAND_QUANTILES))
+
     importance = sorted(zip(WEATHER_FEATURES, model.feature_importances_), key=lambda item: -item[1])
     metrics = {
         "split": "train 2024, test 2025; model chosen on held-out 2024 dates",
@@ -124,10 +128,15 @@ def train(df: pd.DataFrame) -> tuple[dict, dict]:
         "test_inputs_compared": inputs_compared,
         "band_thresholds_mw": list(thresholds),
         "test_band_lift": band_lift(test_df["frp"].to_numpy(), np.expm1(pred_log), thresholds),
+        "fire_weather_thresholds": list(fwi_thresholds),
+        "test_fire_weather_lift": band_lift(test_df["frp"].to_numpy(), fwi_test, fwi_thresholds),
         "large_fire_mw": LARGE_FIRE_MW,
         "feature_importance": {name: float(value) for name, value in importance},
     }
-    bundle = {"model": model, "band_thresholds_mw": list(thresholds), "features": WEATHER_FEATURES, "metrics": metrics}
+    bundle = {
+        "model": model, "band_thresholds_mw": list(thresholds), "fire_weather_thresholds": list(fwi_thresholds),
+        "features": WEATHER_FEATURES, "metrics": metrics,
+    }
     return bundle, metrics
 
 

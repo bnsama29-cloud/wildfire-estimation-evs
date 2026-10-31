@@ -6,7 +6,7 @@ from dataclasses import asdict, dataclass
 import numpy as np
 import pandas as pd
 
-from features import weather_features
+from features import fire_weather_index, weather_features
 
 
 @dataclass(frozen=True)
@@ -43,3 +43,9 @@ def predict_frp(bundle: dict, conditions: Conditions) -> tuple[float, str]:
     row = pd.DataFrame([{**asdict(conditions), "is_day": int(conditions.is_day)}])
     frp_mw = float(np.expm1(bundle["model"].predict(weather_features(row))[0]))
     return frp_mw, band_for(frp_mw, tuple(bundle["band_thresholds_mw"]))
+
+
+def fire_weather(bundle: dict, conditions: Conditions) -> tuple[float, str]:
+    """A published formula, not the ML model, so it reacts directly to temperature, humidity and wind."""
+    index = float(fire_weather_index(conditions.temp_c, conditions.rh_percent, conditions.wind_kmh))
+    return index, band_for(index, tuple(bundle["fire_weather_thresholds"]))
