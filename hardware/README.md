@@ -28,11 +28,11 @@ The browser version of Wokwi cannot reach a dashboard on your PC. The VS Code ex
 
 Wokwi has no MQ-135, so `diagram.json` uses its MQ-2 gas sensor as the stand-in. Both give an analog output. Wokwi does not model the voltage divider, so the sensor connects directly to GPIO34 in the simulation. Always use the divider on the real board.
 
-Wokwi's scale for the gas sensor is not documented. If the alert does not trigger at a sensible ppm, change `SMOKE_ALERT_RAW` in both the sketch and `src/serial_source.py`.
+Measured in Wokwi with the gas sensor on 5 V: 0.2 ppm reads 1063, 1 ppm reads 1656, 400 ppm reads 3628, and 69,183 ppm reads 4032. So `diagram.json` starts at 1 ppm as "clean air", and raising the slider to 400 ppm crosses the 2000 alert threshold. These values apply to the simulator only, so calibrate the real MQ-135 separately.
 
 ## Option B: Wokwi in the browser (simulation only)
 
-Create a new ESP32 project at https://wokwi.com, then paste in `esp32_sensor.ino` as `sketch.ino`, plus `diagram.json` and `libraries.txt`. The Serial Monitor shows the packets, but they cannot reach the dashboard.
+Create a new ESP32 project at https://wokwi.com, then paste in `esp32_sensor.ino` as `sketch.ino` and `diagram.json`, and add **DHT sensor library** in the Library Manager tab. The Serial Monitor shows the packets, but they cannot reach the dashboard.
 
 ## Option C: real hardware
 

@@ -5,7 +5,7 @@
   "parts": [
     { "type": "board-esp32-devkit-c-v4", "id": "esp", "top": 0, "left": 0, "attrs": {} },
     { "type": "wokwi-dht22", "id": "dht", "top": -105, "left": 190, "attrs": { "temperature": "36", "humidity": "24" } },
-    { "type": "wokwi-gas-sensor", "id": "smoke", "top": 90, "left": 190, "attrs": { "ppm": "400" } },
+    { "type": "wokwi-gas-sensor", "id": "smoke", "top": 90, "left": 190, "attrs": { "ppm": "1" } },
     { "type": "wokwi-led", "id": "alert", "top": -80, "left": -110, "attrs": { "color": "red" } },
     { "type": "wokwi-resistor", "id": "r1", "top": 20, "left": -125, "rotate": 90, "attrs": { "value": "220" } }
   ],
