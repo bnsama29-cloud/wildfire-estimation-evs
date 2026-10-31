@@ -37,7 +37,10 @@ int readSmokeRaw() {
 
 void loop() {
   static unsigned long last = 0;
-  if (millis() - last < PERIOD_MS) return;
+  if (millis() - last < PERIOD_MS) {
+    delay(10);  // idling instead of spinning took Wokwi from about 20% to real-time speed
+    return;
+  }
   last = millis();
 
   int smoke = readSmokeRaw();

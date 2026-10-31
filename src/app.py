@@ -152,7 +152,7 @@ def main() -> None:
         st.pydeck_chart(fire_map(shown, basemap), height=430)
         st.caption("Yellow below 5 MW, orange 5-15 MW, red 15 MW and above. FRP is an intensity proxy, not burned area.")
     with right:
-        st.fragment(prediction_panel, run_every="2s" if port else None)(bundle, sliders, port, observed)
+        st.fragment(prediction_panel, run_every="1s" if port else None)(bundle, sliders, port, observed)
 
     table, results = st.columns([3, 2])
     with table:

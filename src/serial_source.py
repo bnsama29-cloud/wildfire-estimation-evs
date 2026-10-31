@@ -11,7 +11,7 @@ from dataclasses import dataclass
 
 WOKWI_URL = "rfc2217://localhost:4000"
 SMOKE_ALERT_RAW = 2000  # keep equal to SMOKE_ALERT_RAW in hardware/esp32_sensor/esp32_sensor.ino
-MAX_READING_AGE_SECONDS = 15.0  # the ESP32 sends every 2 s, but Wokwi can run near 20% speed (about 10 s apart)
+MAX_READING_AGE_SECONDS = 10.0  # the ESP32 sends every 2 s, so this tolerates a few late or failed readings
 
 
 @dataclass(frozen=True)
