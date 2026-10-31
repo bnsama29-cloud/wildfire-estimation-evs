@@ -1,0 +1,32 @@
+{
+  "baseline_mae_log1p_frp": 0.5555176138877869,
+  "baseline_mae_mw": 4.106732368469238,
+  "feature_columns": [
+    "lat",
+    "lon",
+    "brightness",
+    "scan",
+    "track",
+    "bright_t31",
+    "month_sin",
+    "month_cos",
+    "time_sin",
+    "time_cos",
+    "confidence_score",
+    "daynight",
+    "satellite_N20",
+    "satellite_SNPP"
+  ],
+  "improvements": [
+    "Added brightness-temperature, pixel-footprint, day/night, and cyclic seasonal/pass-time features"
+  ],
+  "mae_log1p_frp": 0.2587246596813202,
+  "mae_mw": 2.4334044456481934,
+  "model": "XGBRegressor",
+  "n_samples": 4713018,
+  "r2_log1p_frp": 0.7460856437683105,
+  "split": "random 80/20, random_state=42",
+  "test_size": 942604,
+  "train_size": 3770414,
+  "training_device": "cuda"
+}

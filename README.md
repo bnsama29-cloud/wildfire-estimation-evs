@@ -11,7 +11,8 @@ Educational prototype. Indian satellite fire points (NASA FIRMS VIIRS) joined wi
 | Datasets in repo (`data/raw`) | done |
 | Slides (`docs/EL_Phase1_Wildfire.pptx`) | done |
 | Serial parser + ESP32 sketch (`src/serial_source.py`, `hardware/`) | written, parser unit-tested, sketch not yet flashed |
-| Weather join, model, dashboard | next (Software steps below) |
+| FIRMS cleaning + satellite-only FRP model | implemented; weather not yet included |
+| Weather join and dashboard | next (Software steps below) |
 | Hardware build and integration | after the model works |
 
 ## Repository layout
@@ -61,7 +62,10 @@ python -m pytest tests -q
    - Start with a few thousand points to test, then widen. Respect Open-Meteo's free rate limits; add a short sleep and retry on HTTP 429.
    - Output `data/india_fires_weather.csv` with `lat, lon, acq_date, frp, confidence, temp_c, rh_percent, wind_kmh`.
 4. **Features (`src/features.py`)**. Inputs: `temp_c, rh_percent, wind_kmh`; optional `month`, `brightness`, `confidence`. Target: `log1p(frp)`. Risk bands: start with LOW below 5 MW, MEDIUM 5-15 MW, HIGH 15 MW and above, then tune from the percentiles above.
-5. **Train (`src/train_model.py`, `src/model_io.py`)**. `RandomForestRegressor` inside a scikit-learn `Pipeline`, 80/20 split, report MAE (and R2) on `log1p(frp)` and in MW. Always compare against a baseline that predicts the training median. Save with joblib to `models/`.
+5. **Train (`src/train_model.py`, `src/model_io.py`)**. Train an XGBoost regressor on the satellite-only features with an 80/20 random split, report MAE and R2 on `log1p(frp)` and MAE in MW, and compare with a training-median baseline. By default, use every cleaned row and request CUDA (`device="cuda"`); `--max-samples N` is an optional cap for experiments. Save with joblib to `models/`. Example: `python src/train_model.py`.
+   - Current full-data random-split result: 4,713,018 rows (3,770,414 train / 942,604 test), log-FRP MAE 0.259, MW MAE 2.433, log-FRP R2 0.746. These scores are for a random holdout and may be optimistic because nearby/same-period detections can be related.
+   - Inputs include satellite brightness and brightness temperature, scan/track footprint, location, confidence, day/night, satellite, and cyclic month/pass-time features.
+   - The current model does not use weather yet; implement and validate the weather join before treating it as the planned weather-informed model.
    - **Leakage warning**: points from the same day and area are near-duplicates. Also report a **time-based split** (train 2023-2025, test 2026) and use grouped splits by date for cross-validation.
    - If the weather join is incomplete, fall back to `lat, lon, month` only and label the model "fallback: no weather" on screen.
 6. **Dashboard (`src/app.py`)**.
