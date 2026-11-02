@@ -19,6 +19,21 @@ WEATHER_FEATURES = [
 ]
 
 
+OCCURRENCE_FEATURES = [
+    "temp_c",
+    "rh_percent",
+    "wind_kmh",
+    "rain_7d_mm",
+    "vpd_kpa",
+    "fwi",
+    "fires_last_7d",
+    "month_sin",
+    "month_cos",
+    "lat",
+    "lon",
+]
+
+
 def confidence_score(value: str | float | int | None) -> int:
     if pd.isna(value):
         return 0
@@ -72,6 +87,14 @@ def weather_features(df: pd.DataFrame) -> pd.DataFrame:
         "lon": df["lon"].to_numpy(dtype=np.float32),
     }
     return pd.DataFrame(columns, index=df.index)[WEATHER_FEATURES]
+
+
+def occurrence_features(df: pd.DataFrame) -> pd.DataFrame:
+    """Inputs for next-day prediction. Sliders and sensors can supply all of them."""
+    out = weather_features(df.assign(is_day=1))
+    out["fwi"] = fire_weather_index(df["temp_c"], df["rh_percent"], df["wind_kmh"]).astype(np.float32)
+    out["fires_last_7d"] = df["fires_last_7d"].to_numpy(dtype=np.float32)
+    return out[OCCURRENCE_FEATURES]
 
 
 def add_derived_features(df: pd.DataFrame) -> pd.DataFrame:

@@ -6,8 +6,8 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from features import WEATHER_FEATURES, fire_weather_index, vapour_pressure_deficit_kpa  # noqa: E402
-from predict import Conditions, band_for, choose_conditions, fire_weather, predict_frp  # noqa: E402
+from features import OCCURRENCE_FEATURES, WEATHER_FEATURES, fire_weather_index, vapour_pressure_deficit_kpa  # noqa: E402
+from predict import Conditions, band_for, choose_conditions, fire_weather, predict_frp, predict_tomorrow  # noqa: E402
 from serial_source import SensorReading  # noqa: E402
 
 SLIDERS = Conditions(30.0, 50.0, 12.0, 3.0, 4, True, 21.8, 86.3)
@@ -61,6 +61,27 @@ def test_fire_weather_rises_into_the_high_band_when_the_air_is_hot_dry_and_windy
     harsh = Conditions(44.0, 10.0, 40.0, 0.0, 4, True, 21.8, 86.3)
     assert fire_weather(bundle, calm)[1] == "LOW"
     assert fire_weather(bundle, harsh)[1] == "HIGH"
+
+
+class FixedClassifier:
+    def __init__(self, probability):
+        self.probability = probability
+
+    def predict_proba(self, frame):
+        self.columns = list(frame.columns)
+        return np.array([[1.0 - self.probability, self.probability]])
+
+
+def test_predict_tomorrow_sends_training_columns_and_caps_large_fire_at_any_fire():
+    fire, large = FixedClassifier(0.3), FixedClassifier(0.4)
+    conditions = Conditions(30.0, 50.0, 12.0, 3.0, 4, True, 21.8, 86.3, 25.0)
+    assert predict_tomorrow({"models": {"fire": fire, "large_fire": large}}, conditions) == (0.3, 0.3)
+    assert fire.columns == OCCURRENCE_FEATURES
+
+
+def test_live_reading_keeps_the_recent_fire_count():
+    sliders = Conditions(30.0, 50.0, 12.0, 3.0, 4, True, 21.8, 86.3, 25.0)
+    assert choose_conditions(sliders, SensorReading(36.4, 24.0, 900))[0].fires_last_7d == 25.0
 
 
 class FixedModel:

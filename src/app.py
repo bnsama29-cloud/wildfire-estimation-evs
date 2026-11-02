@@ -13,11 +13,13 @@ import streamlit as st
 
 from features import risk_band
 from model_io import load_model
-from predict import Conditions, choose_conditions, fire_weather, predict_frp
+from predict import Conditions, choose_conditions, fire_weather, predict_frp, predict_tomorrow
 from serial_source import SMOKE_ALERT_RAW, WOKWI_URL, SerialSource, available_ports
 from weather_join import SAMPLE_JOIN_PATH
 
 MODEL_PATH = Path(__file__).resolve().parents[1] / "models" / "wildfire_weather_model.joblib"
+OCCURRENCE_PATH = MODEL_PATH.with_name("wildfire_occurrence_model.joblib")
+TYPICAL_RECENT_FIRES = 20
 SITES = {
     "Similipal, Odisha": (21.85, 86.35),
     "Bandipur, Karnataka": (11.66, 76.63),
@@ -33,6 +35,11 @@ SOURCE_NONE, SOURCE_SERIAL, SOURCE_WOKWI = "None (sliders only)", "ESP32 on USB"
 @st.cache_resource
 def load_bundle():
     return load_model(MODEL_PATH) if MODEL_PATH.exists() else None
+
+
+@st.cache_resource
+def load_occurrence():
+    return load_model(OCCURRENCE_PATH) if OCCURRENCE_PATH.exists() else None
 
 
 @st.cache_data
@@ -86,7 +93,7 @@ def input_panel(fires: pd.DataFrame) -> tuple[Conditions, float | None]:
         r = rows.iloc[st.selectbox("Fire point", range(len(rows)), format_func=lambda i: labels[i])]
         st.caption(f"{r.temp_c:.1f} °C, {r.rh_percent:.0f} % RH, {r.wind_kmh:.0f} km/h, {r.rain_7d_mm:.0f} mm rain in 7 days")
         return Conditions(r.temp_c, r.rh_percent, r.wind_kmh, r.rain_7d_mm, r.month,
-                          r.daynight == "D", r.lat, r.lon), float(r.frp)
+                          r.daynight == "D", r.lat, r.lon, TYPICAL_RECENT_FIRES), float(r.frp)
 
     temp = st.slider("Temperature (°C)", 0, 50, 36)
     rh = st.slider("Relative humidity (%)", 5, 100, 25)
@@ -95,8 +102,9 @@ def input_panel(fires: pd.DataFrame) -> tuple[Conditions, float | None]:
     site = st.selectbox("Location", list(SITES))
     month = st.select_slider("Month", MONTHS, value="Apr")
     is_day = st.toggle("Daytime", value=True)
+    recent = st.slider("Satellite fires in this area, last 7 days", 0, 300, TYPICAL_RECENT_FIRES)
     lat, lon = SITES[site]
-    return Conditions(temp, rh, wind, rain, MONTHS.index(month) + 1, is_day, lat, lon), None
+    return Conditions(temp, rh, wind, rain, MONTHS.index(month) + 1, is_day, lat, lon, recent), None
 
 
 def show_sensor(reading, port: str | None) -> None:
@@ -116,12 +124,20 @@ def show_sensor(reading, port: str | None) -> None:
             st.success("Connected. No smoke alert.")
 
 
-def prediction_panel(bundle: dict, sliders: Conditions, port: str | None, observed: float | None) -> None:
+def prediction_panel(bundle: dict, occurrence: dict | None, sliders: Conditions, port: str | None,
+                     observed: float | None) -> None:
     reading = get_source(port).latest() if port else None
     conditions, live = choose_conditions(sliders, reading)
-    st.subheader("Estimated fire intensity")
     if live:
         st.caption("Using live temperature and humidity.")
+    if occurrence is not None:
+        st.subheader("Fire prediction for tomorrow")
+        fire, large = predict_tomorrow(occurrence, conditions)
+        any_fire, big_fire = st.columns(2)
+        any_fire.metric("Chance of any fire", f"{fire:.0%}")
+        big_fire.metric("Chance of a large fire", f"{large:.0%}", help="A detection of 15 MW or more.")
+        st.caption("For the surrounding area of about 100 km. A fire here means a satellite detection.")
+    st.subheader("Severity if a fire burns")
     if bundle is None:
         st.warning("Model not found. Run src/train_weather_model.py.")
     else:
@@ -143,6 +159,7 @@ def main() -> None:
 
     port, basemap = sidebar_controls()
     bundle = load_bundle()
+    occurrence = load_occurrence()
     fires = load_fires()
 
     left, centre, right = st.columns([1, 2, 1.1])
@@ -155,7 +172,7 @@ def main() -> None:
         st.pydeck_chart(fire_map(shown, basemap), height=430)
         st.caption("Yellow below 5 MW, orange 5-15 MW, red 15 MW and above. FRP is an intensity proxy, not burned area.")
     with right:
-        st.fragment(prediction_panel, run_every="1s" if port else None)(bundle, sliders, port, observed)
+        st.fragment(prediction_panel, run_every="1s" if port else None)(bundle, occurrence, sliders, port, observed)
 
     table, results = st.columns([3, 2])
     with table:

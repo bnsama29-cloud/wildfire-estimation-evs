@@ -10,7 +10,8 @@ Educational prototype. Indian satellite fire points (NASA FIRMS VIIRS) joined wi
 |---|---|
 | FIRMS cleaning (`src/data_prep.py`) | done: 4,097,001 vegetation fire points |
 | Weather join (`src/weather_join.py`) | done: 1,910,632 fire points from 2024-25 across the 180 busiest 1 degree cells |
-| Weather model (`src/train_weather_model.py`) | done: results below |
+| Severity model (`src/train_weather_model.py`) | done: results below |
+| Next-day fire prediction (`src/train_occurrence_model.py`) | done: results below |
 | Dashboard (`src/app.py`) | done: runs offline with no sensor |
 | ESP32 sketch and Wokwi project (`hardware/`) | sketch compiles and runs on wokwi.com; dashboard link tested against a stand-in server, not yet against live Wokwi; not yet flashed to a real board |
 | Slides (`docs/EL_Phase1_Wildfire.pptx`) | updated with the final model, timeline and SDG slide; verify citations before submitting |
@@ -36,6 +37,26 @@ Bands are relative: a fire in the HIGH band was about 25 times as likely to be l
 
 The dashboard therefore also shows the **Fosberg Fire Weather Index**, a published formula from temperature, humidity and wind. It is not machine learning, and it reacts directly to the sensor. Tested the same way on 2025 fires, 4.1 % of fires in its LOW band were large, against 12.4 % in its HIGH band.
 
+## Next-day fire prediction
+
+`src/train_occurrence_model.py` predicts, for one 1 degree cell, the chance of any satellite-detected fire tomorrow and the chance of a large one (15 MW or more). It uses 130,140 cell-days from the 180 busiest cells in 2024-25, and takes under a minute on a laptop. Inputs are the weather at 13:30 India time, month, place and the number of fires in the cell over the previous 7 days.
+
+The 80/20 split holds out whole weeks, because neighbouring days are nearly the same and a random row split would score too high. Training on 2024 and testing on 2025 is the harder check.
+
+| Measure | Any fire, 80/20 | Any fire, 2025 | Large fire, 80/20 | Large fire, 2025 |
+|---|---|---|---|---|
+| How often it really happened | 49 % | 53 % | 11 % | 13 % |
+| ROC-AUC, model | 0.93 | 0.93 | 0.93 | 0.92 |
+| ROC-AUC, cell and month average | 0.92 | 0.89 | 0.91 | 0.86 |
+| PR-AUC, model | 0.92 | 0.94 | 0.63 | 0.66 |
+| PR-AUC, cell and month average | 0.90 | 0.88 | 0.51 | 0.48 |
+
+ROC-AUC and PR-AUC score how well the model ranks fire days above other days, where 1.0 is perfect. Predicted chances match what happened: on 2025, days given about 30 % for a large fire had one 29 % of the time.
+
+Recent fires are the strongest input, at about 60 % of feature importance for any fire and 53 % for a large fire. Without them, PR-AUC for large fires on 2025 falls from 0.66 to 0.57. So this mostly forecasts that fire activity continues, and the first fire of a season is harder to predict. Fire days are also common in these busy cells, so a high chance of any fire is normal in the dry season.
+
+**What the project predicts:** the chance of a fire and of a large fire tomorrow, and severity as FRP if a fire burns. **It does not predict harm** such as area burned, damage or injuries, because the data has none of those.
+
 ## Run it
 
 ```bash
@@ -55,6 +76,7 @@ python src/data_prep.py
 python src/weather_join.py fetch --cells 180   # about 2 hours, resumes if stopped
 python src/weather_join.py join
 python src/train_weather_model.py
+python src/train_occurrence_model.py
 ```
 
 `src/train_model.py` is a separate satellite-only model that uses brightness and other values measured during a detection. It answers a different question and the dashboard does not use it. `models/wildfire_model_metrics.json` predates the vegetation-fire filter, so retrain before quoting it.
@@ -118,7 +140,8 @@ Numbers 1-3 and 4 are already made; 5-10 are produced as the work progresses. Sa
 - Satellites pass a few times a day: no detection does not mean no fire, and clouds block detections.
 - Weather comes from one point per 1 degree cell, and only the 180 busiest cells are covered (about 90 % of 2024-25 detections).
 - FRP depends on fuel and fire size as well as weather, so weather-only R2 is modest (0.17).
-- The model estimates how intense a fire would be if one burns. It does not predict whether a fire will start.
+- The severity model estimates how intense a fire would be if one burns. It does not predict harm.
+- Next-day prediction covers the 180 busiest cells, is for an area about 100 km wide, and counts satellite detections, so small fires and fires under cloud are missed. Sites outside those cells, such as Similipal and Bandipur, rely on nearby cells.
 - Risk bands are relative to this dataset, not an official danger rating.
 - The ESP32 smoke value is a relative index from a low-cost sensor.
 
