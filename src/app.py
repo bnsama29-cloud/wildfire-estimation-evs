@@ -131,11 +131,11 @@ def prediction_panel(bundle: dict, occurrence: dict | None, sliders: Conditions,
     if live:
         st.caption("Using live temperature and humidity.")
     if occurrence is not None:
-        st.subheader("Fire prediction for tomorrow")
+        st.subheader("Chance of fire tomorrow")
         fire, large = predict_tomorrow(occurrence, conditions)
         any_fire, big_fire = st.columns(2)
-        any_fire.metric("Chance of any fire", f"{fire:.0%}")
-        big_fire.metric("Chance of a large fire", f"{large:.0%}", help="A detection of 15 MW or more.")
+        any_fire.metric("Any fire", f"{fire:.0%}")
+        big_fire.metric("Large fire", f"{large:.0%}", help="A detection of 15 MW or more.")
         st.caption("For the surrounding area of about 100 km. A fire here means a satellite detection.")
     st.subheader("Severity if a fire burns")
     if bundle is None:

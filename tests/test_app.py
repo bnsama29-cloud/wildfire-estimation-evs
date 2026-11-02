@@ -24,8 +24,8 @@ def test_app_runs_without_hardware(app):
     assert not app.exception
     assert app.title[0].value == "Early Wildfire Detection and Analysis using ML"
     assert metric(app, "Predicted FRP if a fire burns here").endswith("MW")
-    assert metric(app, "Chance of any fire").endswith("%")
-    assert metric(app, "Chance of a large fire").endswith("%")
+    assert metric(app, "Any fire").endswith("%")
+    assert metric(app, "Large fire").endswith("%")
     assert any(text.value.startswith("Risk band:") for text in [*app.success, *app.warning, *app.error])
 
 
