@@ -1,61 +1,42 @@
 # Early Wildfire Detection and Analysis using ML
 
-Educational prototype. Indian satellite fire points (NASA FIRMS VIIRS) joined with weather (Open-Meteo) to estimate fire intensity, shown in a Streamlit dashboard and fed live by an ESP32 sensor unit. **Not an official forecast and not a safety device.**
+Educational prototype by RV College of Engineering students (EL Phase-1). It joins NASA satellite fire detections over India with weather data, predicts next-day fire and fire severity, and shows the results on a live dashboard fed by an ESP32 sensor unit.
 
-> **FRP (Fire Radiative Power, MW) is a satellite intensity proxy. It is not burned area in hectares.**
+**Not an official forecast and not a safety device.** FRP (Fire Radiative Power, in MW) is a satellite intensity proxy, not burned area. The animal collars in the demo are simulated: no real animal carries this hardware.
 
-## Status
+![Dashboard](docs/images/dashboard.png)
 
-| Part | State |
-|---|---|
-| FIRMS cleaning (`src/data_prep.py`) | done: 4,097,001 vegetation fire points |
-| Weather join (`src/weather_join.py`) | done: 1,910,632 fire points from 2024-25 across the 180 busiest 1 degree cells |
-| Severity model (`src/train_weather_model.py`) | done: results below |
-| Next-day fire prediction (`src/train_occurrence_model.py`) | done: results below |
-| Dashboard (`src/app.py`) | done: runs offline with no sensor |
-| ESP32 sketch and Wokwi project (`hardware/`) | sketch compiles and runs on wokwi.com; dashboard link tested against a stand-in server, not yet against live Wokwi; not yet flashed to a real board |
-| Slides (`docs/EL_Phase1_Wildfire.pptx`) | updated with the final model, timeline and SDG slide; verify citations before submitting |
+## Remaining work
 
-## Results
+- [ ] Test the collar sliders through the new firmware in Wokwi, and measure the sensor-to-screen delay
+- [ ] Flash the real ESP32 and wire the DHT22 and MQ-135
+- [ ] Calibrate the smoke threshold on the real rig
+- [ ] Add a switch for real sensor readings, for a demo with the rig on a toy animal
+- [ ] Take rig photos and live demo evidence
+- [ ] Verify every citation in the slides
+- [ ] Write the final report and conference paper draft
 
-Trained on 879,112 fires from 2024 and tested on 1,031,520 fires from 2025. The model was chosen on held-out 2024 dates, so 2025 stayed unseen.
+## What it predicts
 
-| Measure on 2025 | Median guess | Final model (XGBoost, monotonic weather) |
+| Question | Output | Result on held-out data |
 |---|---|---|
-| Typical error (MAE) | 4.72 MW | 4.01 MW |
-| R2 on log FRP | -0.01 | 0.46 |
+| Will a fire be detected tomorrow? | Chance of any fire within about 100 km | ROC-AUC 0.93; cell and month average 0.92 |
+| Will it be a large fire (15 MW or more)? | Chance of a large fire | PR-AUC 0.63; cell and month average 0.51 |
+| How severe would it be if one burns? | Estimated FRP and risk band | Typical error 4.01 MW; median guess 4.72 MW |
 
-| Predicted band | 2025 fires | Share that were large (15 MW or more) |
-|---|---|---|
-| LOW (below 4.4 MW) | 523,921 | 1.1 % |
-| MEDIUM (4.4-6.9 MW) | 343,903 | 6.0 % |
-| HIGH (6.9 MW and above) | 163,696 | 27.2 % |
+The next-day scores use an 80/20 split that holds out whole weeks, because neighbouring days are nearly identical. On the harder check of training on 2024 and testing on 2025, large fire PR-AUC is 0.66 against 0.48. Severity is tested on 1,031,520 fires from 2025: 27.2 % of fires in the HIGH band were large, against 1.1 % in LOW.
 
-Bands are relative: a fire in the HIGH band was about 25 times as likely to be large as one in the LOW band.
+**It does not predict harm** such as area burned, damage or injuries, because the data has none of those.
 
-**Weather adds little once place, season and time of day are known.** Weather alone reaches R2 0.17, place, month and day or night alone reach 0.46, and all of them together also reach 0.46. Day or night accounts for 86 % of the model's feature importance, and daytime detections have a median of 4.7 MW against 1.3 MW at night. So temperature moves the predicted FRP only slightly: from 15 to 45 degrees C at Similipal in April it goes from 3.3 to 4.3 MW. Humidity has no effect there above about 22 %, but very dry air matters: at 36 degrees C the estimate goes from 3.8 MW (LOW) at 25 % to 7.4 MW (HIGH) at 5 %. That is what the data shows, and the model is not tuned to look more sensitive.
+Recent fires are the strongest input. Weather adds a real but smaller signal, so temperature alone moves the predictions only slightly, while very dry air moves them more. The dashboard also shows the Fosberg Fire Weather Index, a published formula that reacts directly to the sensor.
 
-The dashboard therefore also shows the **Fosberg Fire Weather Index**, a published formula from temperature, humidity and wind. It is not machine learning, and it reacts directly to the sensor. Tested the same way on 2025 fires, 4.1 % of fires in its LOW band were large, against 12.4 % in its HIGH band.
+## How it works
 
-## Next-day fire prediction
+![System architecture](docs/images/architecture.png)
 
-`src/train_occurrence_model.py` predicts, for one 1 degree cell, the chance of any satellite-detected fire tomorrow and the chance of a large one (15 MW or more). It uses 130,140 cell-days from the 180 busiest cells in 2024-25, and takes under a minute on a laptop. Inputs are the weather at 13:30 India time, month, place and the number of fires in the cell over the previous 7 days.
+In the demo, the dashboard sliders send values to the ESP32, and the ESP32 reports them as its sensor readings:
 
-The 80/20 split holds out whole weeks, because neighbouring days are nearly the same and a random row split would score too high. Training on 2024 and testing on 2025 is the harder check.
-
-| Measure | Any fire, 80/20 | Any fire, 2025 | Large fire, 80/20 | Large fire, 2025 |
-|---|---|---|---|---|
-| How often it really happened | 49 % | 53 % | 11 % | 13 % |
-| ROC-AUC, model | 0.93 | 0.93 | 0.93 | 0.92 |
-| ROC-AUC, cell and month average | 0.92 | 0.89 | 0.91 | 0.86 |
-| PR-AUC, model | 0.92 | 0.94 | 0.63 | 0.66 |
-| PR-AUC, cell and month average | 0.90 | 0.88 | 0.51 | 0.48 |
-
-ROC-AUC and PR-AUC score how well the model ranks fire days above other days, where 1.0 is perfect. Predicted chances match what happened: on 2025, days given about 30 % for a large fire had one 29 % of the time.
-
-Recent fires are the strongest input, at about 60 % of feature importance for any fire and 53 % for a large fire. Without them, PR-AUC for large fires on 2025 falls from 0.66 to 0.57. So this mostly forecasts that fire activity continues, and the first fire of a season is harder to predict. Fire days are also common in these busy cells, so a high chance of any fire is normal in the dry season.
-
-**What the project predicts:** the chance of a fire and of a large fire tomorrow, and severity as FRP if a fire burns. **It does not predict harm** such as area burned, damage or injuries, because the data has none of those.
+![Collar demo](docs/images/collar_demo.png)
 
 ## Run it
 
@@ -67,7 +48,7 @@ python -m pytest tests -q
 streamlit run src/app.py
 ```
 
-The trained model and a 30,000-row sample are in the repo, so the dashboard needs no download. The first load can take up to a minute.
+The trained models and a 30,000-row sample are in the repo, so the dashboard needs no download and no sensor. Leave **Live source** on **Sliders**, or see [hardware/README.md](hardware/README.md) for Wokwi, wiring, flashing and calibration.
 
 To rebuild everything from the FIRMS zips:
 
@@ -80,72 +61,38 @@ python src/train_occurrence_model.py
 python src/map_outline.py
 ```
 
-`src/train_model.py` is a separate satellite-only model that uses brightness and other values measured during a detection. It answers a different question and the dashboard does not use it. `models/wildfire_model_metrics.json` predates the vegetation-fire filter, so retrain before quoting it.
-
-## Hardware and Wokwi
-
-See [hardware/README.md](hardware/README.md) for Wokwi, wiring, flashing and calibration. To demo the whole system with no board, run `python hardware/demo_sensor.py` and set **Live source** to **Wokwi** in the dashboard. The same sketch runs in Wokwi and on the real ESP32. The DHT22 replaces the temperature and humidity sliders, and the smoke sensor drives the alert only, because the model is not trained on smoke.
-
-## SDGs
-
-See [docs/SDG_alignment.md](docs/SDG_alignment.md).
-
 ## Repository layout
 
 ```
-data/raw/        FIRMS VIIRS zips (tracked); extracted CSVs are git-ignored
-data/            india_fires_weather.csv (30,000-row sample); the full join and cache are local only
-src/             app.py  predict.py  features.py  weather_join.py  train_weather_model.py
-                 data_prep.py  train_model.py  model_io.py  serial_source.py
-models/          wildfire_weather_model.joblib and its metrics
-hardware/        ESP32 sketch, Wokwi project and wiring guide
+data/raw/        NASA FIRMS VIIRS zips
+data/            30,000-row fire and weather sample, India map outline
+src/             dashboard, data pipeline, model training and prediction, serial reader
+models/          trained next-day and severity models with their metrics
+hardware/        ESP32 sketch, Wokwi project, demo sensor and wiring guide
 tests/           pytest tests
-evidence/        screenshots, plots, photos for the report
-docs/            slides, SDG alignment, fire occurrence data notes
+docs/            slides, SDG alignment, diagrams
 ```
 
 ## Data
 
-| File | Content |
-|---|---|
-| `data/raw/DL_FIRE_J1V-C2_834163.zip` | VIIRS NOAA-20 (J1), 375 m. `fire_archive` 2,370,155 rows + `fire_nrt` 32,132 rows |
-| `data/raw/DL_FIRE_SV-C2_834164.zip` | VIIRS Suomi NPP (SV), 375 m. `fire_archive` 2,281,841 rows + `fire_nrt` 29,259 rows |
-| `data/samples/open-meteo-21.97N78.98E696m.csv` | Hourly relative humidity for one point (21.97 N, 78.98 E), 2023 onward |
+- **Fires:** NASA FIRMS VIIRS (NOAA-20 and Suomi NPP), 2023-2026, 4,097,001 vegetation fire detections over India. Source: https://firms.modaps.eosdis.nasa.gov/
+- **Weather:** Open-Meteo Historical API, hourly, 2024-25, for the 180 busiest 1 degree cells (about 90 % of detections in those years). Source: https://open-meteo.com/
+- **Joined data:** 1,910,632 fire points and 130,140 cell-days. The full join is rebuilt locally and is not in the repo.
 
-Verified facts about the archives: 2023-01-01 to 2026-07-31, already inside India's box (lat 8.0-35.1, lon 68.5-97.2). Columns: `latitude, longitude, brightness, scan, track, acq_date, acq_time, satellite, instrument, confidence, version, bright_t31, frp, daynight, type`. `fire_nrt` continues the series after July 2026.
+## Limitations
 
-- **Confidence is a letter for VIIRS**: `n` nominal (~79%), `l` low (~18%), `h` high (~2.5%). Map to categories, or drop `l` for cleaner training.
-- **FRP is heavily skewed**: median about 3.5 MW, 90th percentile about 11 MW, 99th about 47 MW. Train on `log1p(frp)`.
-- `acq_time` is UTC as `HHMM`. India is UTC+5:30.
-- Source: NASA FIRMS (https://firms.modaps.eosdis.nasa.gov/). Weather: Open-Meteo Historical API (https://open-meteo.com/), non-commercial free use.
-
-## Figures
-
-Numbers 1-3 and 4 are already made; 5-10 are produced as the work progresses. Save images in `evidence/`.
-
-| Fig | Where | What it shows | Caption |
-|---|---|---|---|
-| 1 | Slide 3 | Concept image: a VIIRS satellite scanning India with fire hotspots | A satellite detects fire hotspots over India; each carries an FRP value. |
-| 2 | Slide 8 | Architecture. Top lane: offline ML pipeline (FIRMS data, clean, weather join, XGBoost, evaluate, saved model). Middle lane: ESP32 with DHT22 and MQ-135, USB serial packet, Python reader. Bottom lane: dashboard with fire map, predicted FRP and risk band, live sensor panel, slider fallback | System architecture: ML pipeline, ESP32 sensor unit and Streamlit dashboard. |
-| 3 | Slide 9 | Dashboard mockup (illustrative values): sliders and live ESP32 panel on the left, India fire map in the centre, predicted FRP, risk band and feature importance on the right, sample fire points table at the bottom | Dashboard layout. |
-| 4 | README | Wiring diagram: DHT22 to GPIO4, MQ-135 AO through a 10k/20k divider to GPIO34, USB to PC | ESP32 sensor wiring. |
-| 5 | `evidence/fig5_frp_hist.png` | Histogram of FRP on a log axis, showing the long right tail (median ~3.5 MW, p99 ~47 MW) | Distribution of satellite FRP over India. |
-| 6 | `evidence/fig6_monthly.png` | Fire count by month, showing the dry-season peak | Seasonality of detections. |
-| 7 | `evidence/fig7_pred_vs_actual.png` | Predicted vs actual FRP on the test set with the y = x line | Model accuracy on held-out data. |
-| 8 | `evidence/fig8_importance.png` | Model feature importance | Which inputs matter most. |
-| 9 | `evidence/fig9_map.png` | Real dashboard map: fire points coloured by FRP band | Fire detections across India. |
-| 10 | `evidence/fig10_rig.jpg` | Photo of the ESP32 rig next to the dashboard showing live values | Hardware integrated with the dashboard. |
-
-## Limitations to state in the report
-
-- Satellites pass a few times a day: no detection does not mean no fire, and clouds block detections.
-- Weather comes from one point per 1 degree cell, and only the 180 busiest cells are covered (about 90 % of 2024-25 detections).
-- FRP depends on fuel and fire size as well as weather, so weather-only R2 is modest (0.17).
-- The severity model estimates how intense a fire would be if one burns. It does not predict harm.
-- Next-day prediction covers the 180 busiest cells, is for an area about 100 km wide, and counts satellite detections, so small fires and fires under cloud are missed. Sites outside those cells, such as Similipal and Bandipur, rely on nearby cells.
+- Results apply to the busiest fire areas in 2024-25, not all of India.
+- A fire means a satellite detection, so small fires and fires under cloud are missed.
+- The next-day model mostly forecasts that fire activity continues, so the first fire of a season is harder to predict.
+- Each 1 degree cell uses weather from one point, so it is approximate for any single fire.
 - Risk bands are relative to this dataset, not an official danger rating.
-- The ESP32 smoke value is a relative index from a low-cost sensor.
+- The map outline shows where detections fall. It is not an official boundary.
+- The ESP32 smoke value is a relative reading from a low-cost sensor.
+
+## SDGs
+
+See [docs/SDG_alignment.md](docs/SDG_alignment.md). The project supports SDG 13 and SDG 15, with SDG 11 and SDG 3 through the sensor unit.
 
 ## References
 
-Breiman (2001), *Machine Learning* 45(1); Giglio, Schroeder & Justice (2016), *Remote Sensing of Environment* 178; Schroeder et al. (2014), *Remote Sensing of Environment* 143; Wooster et al. (2005), *J. Geophys. Res.* 110, D24311; Jain et al. (2020), *Environmental Reviews* 28(4). Fosberg (1978), *Weather in wildland fire management: the fire weather index*, Conference on Sierra Nevada Meteorology. Verify each citation before submitting.
+Breiman (2001), *Machine Learning* 45(1); Fosberg (1978), *Weather in wildland fire management: the fire weather index*, Conference on Sierra Nevada Meteorology; Giglio, Schroeder & Justice (2016), *Remote Sensing of Environment* 178; Schroeder et al. (2014), *Remote Sensing of Environment* 143; Wooster et al. (2005), *J. Geophys. Res.* 110, D24311; Jain et al. (2020), *Environmental Reviews* 28(4).
