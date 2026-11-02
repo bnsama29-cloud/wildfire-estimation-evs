@@ -34,6 +34,20 @@ Measured in Wokwi with the gas sensor on 5 V: 0.2 ppm reads 1063, 1 ppm reads 16
 
 Create a new ESP32 project at https://wokwi.com, then paste in `esp32_sensor.ino` as `sketch.ino` and `diagram.json`, and add **DHT sensor library** in the Library Manager tab. The Serial Monitor shows the packets, but they cannot reach the dashboard.
 
+## Demo with simulated animal collars
+
+No real animal carries this hardware. The dashboard shows five simulated collars on the map, and the one ESP32 stands in for whichever collar is selected.
+
+1. Connect the ESP32 or start Wokwi, then set **Live source** in the dashboard.
+2. Choose a collar under **Simulated collar**.
+3. Move the temperature, humidity and smoke sliders in the **Live collar** panel.
+
+The dashboard sends `SET,TEMP,HUMIDITY,SMOKE` to the board. The sketch stops reading its sensors and prints those values as its normal packet, so they appear in the serial monitor, then on the dashboard and map. The alert LED follows the smoke value. Send `AUTO` from the serial monitor to return to the real sensors.
+
+The sliders override the sensors as soon as a live source is selected. To show real sensor values, send `AUTO`, then leave the sliders alone: the dashboard sends SET again if a slider and the reading differ, so use the **Sliders** source for a sliders-only demo.
+
+A real collar would also need GPS, a long-life battery and a radio link. The MQ-135 is a poor fit because its heater draws too much power for a collar, and any tagging of wild animals needs permits and veterinary oversight.
+
 ## Option C: scripted demo (no board and no Wokwi)
 
 `demo_sensor.py` stands in for the ESP32. It serves the same serial bridge as Wokwi on port 4000 and plays a 140-second scenario on a loop: calm air, a hot day, very dry air, smoke, then recovery. Its values are made up, so use it to show how the system behaves, not as a measurement.

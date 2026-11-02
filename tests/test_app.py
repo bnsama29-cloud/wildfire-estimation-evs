@@ -19,6 +19,10 @@ def metric(app, label):
     return next(m.value for m in app.metric if m.label == label)
 
 
+def slider(app, label):
+    return next(s for s in app.slider if s.label == label)
+
+
 @pytest.mark.skipif(not READY, reason="model and data not built")
 def test_app_runs_without_hardware(app):
     assert not app.exception
@@ -30,13 +34,29 @@ def test_app_runs_without_hardware(app):
 
 
 @pytest.mark.skipif(not READY, reason="model and data not built")
-def test_sliders_change_the_prediction_inputs_without_error(app):
-    app.slider[0].set_value(48)
-    app.slider[1].set_value(8)
+def test_collar_sliders_change_the_prediction_inputs_without_error(app):
     before = metric(app, "Fire weather index")
+    slider(app, "Temperature sensor (°C)").set_value(48.0)
+    slider(app, "Humidity sensor (%)").set_value(8.0)
     app.run()
     assert not app.exception
     assert int(metric(app, "Fire weather index")) > int(before)
+
+
+@pytest.mark.skipif(not READY, reason="model and data not built")
+def test_smoke_slider_raises_the_alert_without_a_board(app):
+    assert not any("Smoke alert" in e.value for e in app.error)
+    slider(app, "Smoke sensor (raw)").set_value(2500)
+    app.run()
+    assert not app.exception
+    assert any("Smoke alert" in e.value for e in app.error)
+
+
+@pytest.mark.skipif(not READY, reason="model and data not built")
+def test_selecting_another_collar_changes_the_location_and_keeps_working(app):
+    app.selectbox[0].set_value("Clouded leopard L3").run()
+    assert not app.exception
+    assert any("Clouded leopard L3" in s.value for s in app.subheader)
 
 
 @pytest.mark.skipif(not READY, reason="model and data not built")
@@ -45,14 +65,6 @@ def test_stopped_simulator_falls_back_to_sliders(app):
     assert not app.exception
     assert metric(app, "Predicted FRP").endswith("MW")
     assert any("Waiting for data" in w.value for w in app.warning)
-
-
-@pytest.mark.skipif(not READY, reason="model and data not built")
-def test_live_source_locks_the_temperature_and_humidity_sliders(app):
-    assert not app.slider[0].disabled
-    app.radio[0].set_value("Wokwi").run()
-    assert app.slider[0].disabled and app.slider[1].disabled
-    assert not app.slider[2].disabled
 
 
 @pytest.mark.skipif(not READY, reason="model and data not built")

@@ -74,6 +74,13 @@ class SerialSource:
             return None
         return self._last if time.monotonic() - self._last_time <= max_age else None
 
+    def send(self, line: str) -> None:
+        """Send one command line to the board. A failed send is dropped, like a failed read."""
+        try:
+            self._open().write(line.encode("ascii") + b"\n")
+        except Exception:
+            self.close()
+
     def close(self) -> None:
         if self._ser is not None:
             try:

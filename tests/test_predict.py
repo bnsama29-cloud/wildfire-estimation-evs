@@ -7,6 +7,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
+from collars import collar_status, matches, set_command  # noqa: E402
 from features import OCCURRENCE_FEATURES, WEATHER_FEATURES, fire_weather_index, vapour_pressure_deficit_kpa  # noqa: E402
 from map_outline import outline_cells  # noqa: E402
 from predict import Conditions, band_for, choose_conditions, fire_weather, predict_frp, predict_tomorrow  # noqa: E402
@@ -32,6 +33,23 @@ def test_live_reading_replaces_only_temperature_and_humidity():
     assert live
     assert (conditions.temp_c, conditions.rh_percent) == (36.4, 24.0)
     assert (conditions.wind_kmh, conditions.rain_7d_mm, conditions.lat) == (12.0, 3.0, 21.8)
+
+
+def test_set_command_matches_what_the_sketch_parses():
+    assert set_command(44.0, 8.0, 2600) == "SET,44.0,8.0,2600"
+
+
+def test_matches_needs_every_value_and_a_reading():
+    reading = SensorReading(44.0, 8.0, 2600)
+    assert matches(reading, 44.0, 8.0, 2600)
+    assert not matches(reading, 44.0, 8.0, 2650)
+    assert not matches(None, 44.0, 8.0, 2600)
+
+
+def test_collar_status_puts_smoke_above_dry_air():
+    assert collar_status(SensorReading(44.0, 8.0, 2600), "HIGH") == "SMOKE"
+    assert collar_status(SensorReading(44.0, 8.0, 1000), "HIGH") == "DRY"
+    assert collar_status(SensorReading(28.0, 65.0, 1000), "LOW") == "OK"
 
 
 def test_outline_keeps_one_centre_per_cell():

@@ -3,6 +3,7 @@
 Serves the same RFC2217 serial bridge as Wokwi on port 4000 and plays a fire-weather
 scenario, so the dashboard reads it through its unchanged Wokwi source.
 The values are made up: this shows how the system behaves, not a measurement.
+Like the sketch, it obeys SET,TEMP,HUMIDITY,SMOKE and AUTO lines from the dashboard.
 
 Run: python hardware/demo_sensor.py
 """
@@ -40,6 +41,16 @@ def packet_at(seconds: float) -> str:
     return f"{temp:.1f},{rh:.1f},{smoke:.0f}"
 
 
+def apply_commands(data: bytes, override: str | None) -> str | None:
+    """The packet to keep sending after these command lines, or None to follow the scenario."""
+    for line in data.decode("ascii", errors="ignore").splitlines():
+        if line.strip() == "AUTO":
+            override = None
+        elif line.startswith("SET,"):
+            override = line.strip()[len("SET,"):]
+    return override
+
+
 class _Connection:
     """The small socket interface that pyserial's PortManager writes to."""
 
@@ -57,17 +68,19 @@ def stream(client: socket.socket, period: float = PERIOD_SECONDS, log_path: str 
     except OSError:  # the client left during the handshake
         return
 
+    override = [None]
+
     def answer_negotiation() -> None:
         try:
             while data := client.recv(1024):
-                list(manager.filter(data))
+                override[0] = apply_commands(b"".join(manager.filter(data)), override[0])
         except OSError:
             return
 
     threading.Thread(target=answer_negotiation, daemon=True).start()
     started = time.monotonic()
     for _ in itertools.count():
-        line = packet_at(time.monotonic() - started)
+        line = override[0] or packet_at(time.monotonic() - started)
         try:
             connection.write(b"".join(manager.escape(line.encode("ascii") + b"\r\n")))
         except OSError:
