@@ -106,10 +106,10 @@ def show_sensor(reading, port: str | None) -> None:
     elif reading is None:
         st.warning("Waiting for data. Using the sliders.")
     else:
-        temp, rh, smoke = st.columns(3)
+        temp, rh = st.columns(2)  # the right-hand panel is too narrow for three values
         temp.metric("Temp", f"{reading.temp_c:.1f} °C")
         rh.metric("Humidity", f"{reading.rh_percent:.0f} %")
-        smoke.metric("Smoke (raw)", reading.smoke_raw, help=f"Relative ADC value, not ppm. Alert at {SMOKE_ALERT_RAW}.")
+        st.metric("Smoke (raw)", reading.smoke_raw, help=f"Relative ADC value, not ppm. Alert at {SMOKE_ALERT_RAW}.")
         if reading.smoke_alert:
             st.error("Smoke alert: reading is above the threshold.")
         else:

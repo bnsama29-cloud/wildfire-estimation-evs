@@ -34,7 +34,17 @@ Measured in Wokwi with the gas sensor on 5 V: 0.2 ppm reads 1063, 1 ppm reads 16
 
 Create a new ESP32 project at https://wokwi.com, then paste in `esp32_sensor.ino` as `sketch.ino` and `diagram.json`, and add **DHT sensor library** in the Library Manager tab. The Serial Monitor shows the packets, but they cannot reach the dashboard.
 
-## Option C: real hardware
+## Option C: scripted demo (no board and no Wokwi)
+
+`demo_sensor.py` stands in for the ESP32. It serves the same serial bridge as Wokwi on port 4000 and plays a 140-second scenario on a loop: calm air, a hot day, very dry air, smoke, then recovery. Its values are made up, so use it to show how the system behaves, not as a measurement.
+
+1. Run `python hardware/demo_sensor.py`. Stop it before starting real Wokwi, because both use port 4000.
+2. In another terminal, run `streamlit run src/app.py`.
+3. In the dashboard sidebar, choose **Wokwi simulator**.
+
+Keep the default Similipal, April, daytime inputs. The risk band moves from LOW to MEDIUM to HIGH as the air dries, and the smoke alert turns on when the raw value reaches 2000.
+
+## Option D: real hardware
 
 Parts: ESP32 DevKit, DHT22, MQ-135 module, 10 kOhm and 20 kOhm resistors, breadboard, jumper wires, USB data cable.
 

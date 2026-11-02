@@ -61,7 +61,7 @@ python src/train_weather_model.py
 
 ## Hardware and Wokwi
 
-See [hardware/README.md](hardware/README.md) for Wokwi, wiring, flashing and calibration. The same sketch runs in Wokwi and on the real ESP32. The DHT22 replaces the temperature and humidity sliders, and the smoke sensor drives the alert only, because the model is not trained on smoke.
+See [hardware/README.md](hardware/README.md) for Wokwi, wiring, flashing and calibration. To demo the whole system with no board, run `python hardware/demo_sensor.py` and choose **Wokwi simulator** in the dashboard. The same sketch runs in Wokwi and on the real ESP32. The DHT22 replaces the temperature and humidity sliders, and the smoke sensor drives the alert only, because the model is not trained on smoke.
 
 ## SDGs
 
