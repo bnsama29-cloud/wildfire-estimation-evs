@@ -2,11 +2,13 @@ import sys
 from pathlib import Path
 
 import numpy as np
+import pandas as pd
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from features import OCCURRENCE_FEATURES, WEATHER_FEATURES, fire_weather_index, vapour_pressure_deficit_kpa  # noqa: E402
+from map_outline import outline_cells  # noqa: E402
 from predict import Conditions, band_for, choose_conditions, fire_weather, predict_frp, predict_tomorrow  # noqa: E402
 from serial_source import SensorReading  # noqa: E402
 
@@ -30,6 +32,11 @@ def test_live_reading_replaces_only_temperature_and_humidity():
     assert live
     assert (conditions.temp_c, conditions.rh_percent) == (36.4, 24.0)
     assert (conditions.wind_kmh, conditions.rain_7d_mm, conditions.lat) == (12.0, 3.0, 21.8)
+
+
+def test_outline_keeps_one_centre_per_cell():
+    df = pd.DataFrame({"lat": [21.01, 21.02, 21.5], "lon": [86.01, 86.02, 86.0]})
+    assert outline_cells(df, size=0.15).values.tolist() == [[21.075, 86.025], [21.525, 86.025]]
 
 
 def test_vpd_is_zero_at_saturation_and_about_4_2_kpa_when_hot_and_half_dry():
@@ -77,6 +84,12 @@ def test_predict_tomorrow_sends_training_columns_and_caps_large_fire_at_any_fire
     conditions = Conditions(30.0, 50.0, 12.0, 3.0, 4, True, 21.8, 86.3, 25.0)
     assert predict_tomorrow({"models": {"fire": fire, "large_fire": large}}, conditions) == (0.3, 0.3)
     assert fire.columns == OCCURRENCE_FEATURES
+
+
+def test_historical_fire_keeps_its_own_weather_when_a_sensor_is_connected():
+    conditions, live = choose_conditions(SLIDERS, SensorReading(44.0, 8.0, 900), historical=True)
+    assert conditions == SLIDERS
+    assert not live
 
 
 def test_live_reading_keeps_the_recent_fire_count():

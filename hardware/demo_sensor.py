@@ -1,7 +1,7 @@
 """Scripted stand-in for the ESP32, for demos with no board and no Wokwi.
 
 Serves the same RFC2217 serial bridge as Wokwi on port 4000 and plays a fire-weather
-scenario, so the dashboard reads it through its unchanged "Wokwi simulator" source.
+scenario, so the dashboard reads it through its unchanged Wokwi source.
 The values are made up: this shows how the system behaves, not a measurement.
 
 Run: python hardware/demo_sensor.py
@@ -91,7 +91,7 @@ def main() -> None:
     parser.add_argument("--log", help="also write each packet and the time it was sent to this file")
     args = parser.parse_args()
     server = socket.create_server(("127.0.0.1", args.port))
-    print(f"Demo sensor on port {args.port}. In the dashboard sidebar choose Wokwi simulator.", flush=True)
+    print(f"Demo sensor on port {args.port}. In the dashboard set Live source to Wokwi.", flush=True)
     serve(server, log_path=args.log)
 
 

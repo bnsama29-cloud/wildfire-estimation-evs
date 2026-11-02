@@ -22,9 +22,12 @@ class Conditions:
     fires_last_7d: float = 0.0
 
 
-def choose_conditions(sliders: Conditions, reading) -> tuple[Conditions, bool]:
-    """Live sensor temperature and humidity replace the sliders. Returns the inputs and whether they are live."""
-    if reading is None:
+def choose_conditions(sliders: Conditions, reading, historical: bool = False) -> tuple[Conditions, bool]:
+    """Live sensor temperature and humidity replace the sliders. Returns the inputs and whether they are live.
+
+    A historical fire keeps its own recorded weather, so a connected sensor does not change it.
+    """
+    if reading is None or historical:
         return sliders, False
     return replace(sliders, temp_c=reading.temp_c, rh_percent=reading.rh_percent), True
 

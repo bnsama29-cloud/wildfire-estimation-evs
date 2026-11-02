@@ -23,7 +23,7 @@ The browser version of Wokwi cannot reach a dashboard on your PC. The VS Code ex
 3. Build the firmware: run `pio run` in that folder, or use the PlatformIO Build button.
 4. Open `diagram.json` and press the green play button. Keep the simulator tab visible, or it pauses.
 5. In another terminal, from the repo root, run `streamlit run src/app.py`.
-6. In the dashboard sidebar, choose **Wokwi simulator**.
+6. In the dashboard, set **Live source** to **Wokwi**.
 7. Click the DHT22 and change its temperature and humidity: the dashboard values follow. Click the gas sensor and raise its ppm: the smoke value rises, then the LED and the dashboard alert turn on.
 
 Wokwi has no MQ-135, so `diagram.json` uses its MQ-2 gas sensor as the stand-in. Both give an analog output. Wokwi does not model the voltage divider, so the sensor connects directly to GPIO34 in the simulation. Always use the divider on the real board.
@@ -40,7 +40,7 @@ Create a new ESP32 project at https://wokwi.com, then paste in `esp32_sensor.ino
 
 1. Run `python hardware/demo_sensor.py`. Stop it before starting real Wokwi, because both use port 4000.
 2. In another terminal, run `streamlit run src/app.py`.
-3. In the dashboard sidebar, choose **Wokwi simulator**.
+3. In the dashboard, set **Live source** to **Wokwi**.
 
 Keep the default Similipal, April, daytime inputs. The risk band moves from LOW to MEDIUM to HIGH as the air dries, and the smoke alert turns on when the raw value reaches 2000.
 
@@ -64,7 +64,7 @@ Steps:
 2. Check: open the serial monitor at 115200 baud and expect a line like `36.4,24.0,1830` every 2 s. Close it afterwards, because only one program can hold the port.
 3. Warm up the MQ-135 for several minutes before trusting readings. Its datasheet asks for a much longer first preheat.
 4. Calibrate: note the raw value in clean air and near smoke from a safely extinguished match. Set `SMOKE_ALERT_RAW` between them in both files.
-5. Run `streamlit run src/app.py`, choose **ESP32 on USB**, and pick the port.
+5. Run `streamlit run src/app.py`, set **Live source** to **ESP32 on USB**, and pick the port.
 6. Unplug the board. The dashboard must return to the sliders within about 10 seconds.
 
 Do this safely: use a small amount of smoke in a ventilated area with an adult or lab supervisor present, and keep flames away from the rig.

@@ -1,0 +1,10 @@
+[theme]
+base = "dark"
+backgroundColor = "#0b1220"
+secondaryBackgroundColor = "#172238"
+primaryColor = "#ff7a3d"
+textColor = "#e8eef8"
+font = "Inter, 'Segoe UI Variable', 'Segoe UI', sans-serif"
+
+[client]
+toolbarMode = "minimal"

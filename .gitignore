@@ -23,3 +23,6 @@ models/*.joblib
 data/india_fires_weather_full.csv.gz
 hardware/esp32_sensor/.pio/
 .claude/
+
+# Wokwi extension workspace settings
+hardware/esp32_sensor/.vscode/

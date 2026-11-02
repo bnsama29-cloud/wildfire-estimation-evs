@@ -77,13 +77,14 @@ python src/weather_join.py fetch --cells 180   # about 2 hours, resumes if stopp
 python src/weather_join.py join
 python src/train_weather_model.py
 python src/train_occurrence_model.py
+python src/map_outline.py
 ```
 
 `src/train_model.py` is a separate satellite-only model that uses brightness and other values measured during a detection. It answers a different question and the dashboard does not use it. `models/wildfire_model_metrics.json` predates the vegetation-fire filter, so retrain before quoting it.
 
 ## Hardware and Wokwi
 
-See [hardware/README.md](hardware/README.md) for Wokwi, wiring, flashing and calibration. To demo the whole system with no board, run `python hardware/demo_sensor.py` and choose **Wokwi simulator** in the dashboard. The same sketch runs in Wokwi and on the real ESP32. The DHT22 replaces the temperature and humidity sliders, and the smoke sensor drives the alert only, because the model is not trained on smoke.
+See [hardware/README.md](hardware/README.md) for Wokwi, wiring, flashing and calibration. To demo the whole system with no board, run `python hardware/demo_sensor.py` and set **Live source** to **Wokwi** in the dashboard. The same sketch runs in Wokwi and on the real ESP32. The DHT22 replaces the temperature and humidity sliders, and the smoke sensor drives the alert only, because the model is not trained on smoke.
 
 ## SDGs
 

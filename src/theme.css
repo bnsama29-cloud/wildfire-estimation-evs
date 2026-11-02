@@ -1,0 +1,62 @@
+/* Dashboard layout. Inter loads from Google Fonts when online and falls back to Segoe UI offline. */
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+
+:root {
+  --header-height: 66px;
+  --panel: #111a2c;
+  --line: #243249;
+  --muted: #93a3bb;
+}
+
+[data-testid="stHeader"] { display: none; }
+.stMainBlockContainer { padding: 0.7rem 1rem 0.5rem; max-width: 100%; }
+
+h1 { font-size: 1.45rem !important; font-weight: 700 !important; padding: 0 !important; letter-spacing: -0.02em; }
+h3 { font-size: 0.95rem !important; font-weight: 600 !important; line-height: 1.4 !important; padding: 0.2rem 0 0.15rem !important; color: #ffb38f; }
+[data-testid="stHeading"] { min-height: 1.7rem; flex-shrink: 0; }
+[data-testid="stCaptionContainer"] { color: var(--muted); font-size: 0.74rem; }
+
+.st-key-header { height: var(--header-height); }
+
+.st-key-left_panel, .st-key-map_panel, .st-key-right_panel {
+  height: calc(100vh - var(--header-height) - 1.7rem) !important;
+  flex: 0 0 calc(100vh - var(--header-height) - 1.7rem) !important;  /* Streamlit blocks are flex items, so height alone is ignored */
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 0.55rem 0.75rem;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.st-key-left_panel [data-testid="stVerticalBlock"], .st-key-right_panel [data-testid="stVerticalBlock"] { gap: 0.3rem; }
+
+/* compact inputs, so everything fits one screen */
+.st-key-left_panel [data-testid="stWidgetLabel"] p { font-size: 0.76rem; color: var(--muted); }
+.st-key-left_panel [data-testid="stSlider"] { padding-bottom: 0; }
+
+[data-testid="stMetric"] {
+  background: #172238;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  padding: 0.3rem 0.55rem;
+}
+[data-testid="stMetricLabel"] p { font-size: 0.72rem; color: var(--muted); }
+[data-testid="stMetricValue"] { font-size: 1.3rem; font-weight: 700; }
+[data-testid="stAlert"] { padding: 0; }
+[data-testid="stAlert"] p { font-size: 0.8rem; }
+
+.st-key-map_panel { display: flex; flex-direction: column; }
+.st-key-map_panel [data-testid="stElementContainer"]:has([data-testid="stDeckGlJsonChart"]) { flex: 1 1 0; min-height: 300px; }
+[data-testid="stDeckGlJsonChart"] { border-radius: 10px; overflow: hidden; height: 100% !important; background: #0b1220; }
+
+/* narrow window: panels stack and the page scrolls */
+@media (max-width: 1000px) {
+  [data-testid="stHorizontalBlock"]:has(.st-key-left_panel) { flex-direction: column; }
+  [data-testid="stColumn"]:has(.st-key-left_panel), [data-testid="stColumn"]:has(.st-key-map_panel),
+  [data-testid="stColumn"]:has(.st-key-right_panel) { width: 100% !important; flex: 1 1 100% !important; }
+  .st-key-left_panel, .st-key-right_panel { height: auto !important; flex: 0 0 auto !important; overflow: visible; }
+  .st-key-map_panel { height: 520px !important; flex: 0 0 520px !important; }
+  html, body, [data-testid="stAppViewContainer"], [data-testid="stMain"] { overflow-y: auto; }
+  .st-key-header { height: auto; }
+}
