@@ -26,3 +26,6 @@ hardware/esp32_sensor/.pio/
 
 # Wokwi extension workspace settings
 hardware/esp32_sensor/.vscode/
+
+# Office lock files
+~$*
