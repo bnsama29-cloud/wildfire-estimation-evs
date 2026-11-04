@@ -24,6 +24,13 @@ bool demoMode = false;
 float demoTemp = 0, demoHumidity = 0;
 int demoSmoke = 0;
 unsigned long last = 0;
+constexpr uint8_t ROWS_PER_HEADER = 20;  // repeats the header so it's visible after scrolling
+uint8_t rowsSinceHeader = 0;
+
+void printHeader() {
+  Serial.println(" TEMP C, HUMID %, SMOKE");
+  Serial.println("--------+--------+-------");
+}
 
 void setup() {
   Serial.begin(115200);
@@ -31,6 +38,7 @@ void setup() {
   pinMode(ALERT_LED_PIN, OUTPUT);
   dht.begin();
   analogReadResolution(12);  // 0..4095
+  printHeader();
 }
 
 int readSmokeRaw() {
@@ -69,9 +77,11 @@ void loop() {
   float h = demoMode ? demoHumidity : dht.readHumidity();
   if (isnan(t) || isnan(h)) return;  // skip failed reads; the Python side also rejects bad lines
 
-  Serial.print(t, 1);
-  Serial.print(',');
-  Serial.print(h, 1);
-  Serial.print(',');
-  Serial.println(smoke);
+  // Still "TEMP,HUMIDITY,SMOKE": src/serial_source.py's float()/int() parsing ignores the padding,
+  // so this stays wire-compatible with the dashboard while reading as an aligned table on screen.
+  if (rowsSinceHeader++ >= ROWS_PER_HEADER) {
+    printHeader();
+    rowsSinceHeader = 0;
+  }
+  Serial.printf("%7.1f, %7.1f, %6d\n", t, h, smoke);
 }
